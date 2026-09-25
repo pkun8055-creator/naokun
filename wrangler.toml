@@ -1,6 +1,7 @@
 name = "youtube-notify"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
+keep_vars = true
 [triggers]
 crons = ["0 0 */4 * *"]
 [[kv_namespaces]]
