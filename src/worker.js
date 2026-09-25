@@ -1,20 +1,4 @@
-/**
- * 専属BOT (Cloudflare Worker版)
- * - YouTubeのPubSubHubbub(WebSub)通知を受信し、新着動画をDiscord Webhookへ
- *   @everyone付きで通知する。
- * - discord.pyのようなBotプロセスは使わない。常時稼働サーバー不要。
- *
- * 必要な設定 (wrangler.toml の [vars] と wrangler secret):
- *   YOUTUBE_CHANNEL_ID   監視対象のYouTubeチャンネルID (vars, 非シークレット)
- *   DISCORD_WEBHOOK_URL  通知先DiscordチャンネルのWebhook URL (secret)
- *   CALLBACK_SECRET      WebSubの署名検証用シークレット (secret)
- *   SEEN_VIDEOS          KV Namespace binding (重複通知防止)
- *
- * デプロイ後のURL構成:
- *   https://<worker-url または youtube-notify.pkunyt.com>/youtube-webhook
- */
-
-const CALLBACK_PATH = "/naokun";
+const CALLBACK_PATH = "/youtube-webhook";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
 
@@ -22,13 +6,12 @@ function topicUrl(channelId) {
   return `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 }
 
-// ---- WebSub購読リクエスト ----
 async function subscribeToHub(env) {
   const body = new URLSearchParams({
     "hub.mode": "subscribe",
     "hub.topic": topicUrl(env.YOUTUBE_CHANNEL_ID),
     "hub.callback": `https://${CALLBACK_HOST}${CALLBACK_PATH}`,
-    "hub.lease_seconds": "432000", // 5日
+    "hub.lease_seconds": "432000",
     "hub.verify": "async",
     "hub.secret": env.CALLBACK_SECRET || "",
   });
@@ -42,9 +25,8 @@ async function subscribeToHub(env) {
   return { status: res.status, ok: res.status === 202 || res.status === 204 };
 }
 
-// ---- 署名検証 (HMAC-SHA1) ----
 async function verifySignature(secret, bodyText, signatureHeader) {
-  if (!secret) return true; // シークレット未設定なら検証スキップ
+  if (!secret) return true; 
   if (!signatureHeader || !signatureHeader.includes("=")) return false;
   const [algo, sigHex] = signatureHeader.split("=");
   if (algo !== "sha1") return false;
@@ -70,7 +52,6 @@ async function verifySignature(secret, bodyText, signatureHeader) {
   return diff === 0;
 }
 
-// ---- Atom XMLから動画情報を抽出(正規表現。Workersに標準XMLパーサが無いため) ----
 function extractEntries(xmlText) {
   const entries = [];
   const entryBlocks = xmlText.match(/<entry>[\s\S]*?<\/entry>/g) || [];
@@ -96,8 +77,6 @@ function extractEntries(xmlText) {
 }
 
 function isNewUpload(entry) {
-  // タイトル編集など「更新」通知を新規投稿と誤検知しないよう、
-  // published と updated の差が10分以上ある場合は除外する
   if (!entry.published || !entry.updated) return true;
   const pub = Date.parse(entry.published);
   const upd = Date.parse(entry.updated);
@@ -107,7 +86,7 @@ function isNewUpload(entry) {
 
 async function notifyDiscord(env, entry) {
   const url = `https://www.youtube.com/watch?v=${entry.videoId}`;
-  const content = `@everyone 📢 **${entry.author}** が新しい動画を投稿しました!\n**${entry.title}**\n${url}`;
+  const content = `@everyone 📢naokun01が新しい動画を投稿したらしいよ!!!\n**${entry.title}**\n${url}\n-# ぴーより`;
 
   await fetch(env.DISCORD_WEBHOOK_URL, {
     method: "POST",
@@ -124,7 +103,6 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname !== CALLBACK_PATH) {
-      // 【デバッグ用・後で削除】envに実際にバインドされているキー名の一覧(値は表示しない)
       if (url.pathname === "/debug-env") {
         return new Response(JSON.stringify({ keys: Object.keys(env).sort() }), {
           status: 200,
@@ -132,7 +110,6 @@ export default {
         });
       }
 
-      // 【デバッグ用・後で削除】CALLBACK_SECRETの長さだけを確認する(値そのものは表示しない)
       if (url.pathname === "/debug-secret") {
         const val = env.CALLBACK_SECRET || "";
         return new Response(
@@ -147,15 +124,12 @@ export default {
         );
       }
 
-      // 手動での再購読トリガー(デバッグ用途)。CALLBACK_SECRETをkeyクエリで要求
       if (url.pathname === "/subscribe-now" && url.searchParams.get("key") === env.CALLBACK_SECRET) {
         const result = await subscribeToHub(env);
         return new Response(JSON.stringify(result), { status: 200 });
       }
       return new Response("Not Found", { status: 404 });
     }
-
-    // --- GET: YouTube(Google)からの購読検証 ---
     if (request.method === "GET") {
       const challenge = url.searchParams.get("hub.challenge");
       if (challenge) {
@@ -164,7 +138,6 @@ export default {
       return new Response("Bad Request", { status: 400 });
     }
 
-    // --- POST: 新着動画の通知 ---
     if (request.method === "POST") {
       const bodyText = await request.text();
       const signature = request.headers.get("X-Hub-Signature") || "";
@@ -183,7 +156,6 @@ export default {
         const alreadySeen = await env.SEEN_VIDEOS.get(seenKey);
         if (alreadySeen) continue;
 
-        // 24時間TTLで記録(WebSub通知の再送対策として十分な長さ)
         await env.SEEN_VIDEOS.put(seenKey, "1", { expirationTtl: 60 * 60 * 24 });
 
         ctx.waitUntil(notifyDiscord(env, entry));
@@ -195,7 +167,6 @@ export default {
     return new Response("Method Not Allowed", { status: 405 });
   },
 
-  // 5日のリース期限が切れる前に自動再購読(4日ごと)
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(subscribeToHub(env));
   },
