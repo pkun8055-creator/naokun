@@ -1,3 +1,4 @@
+
 const CALLBACK_PATH = "/youtube-webhook";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
@@ -5,12 +6,13 @@ const CALLBACK_HOST = "api.naokun.pkunyt.com";
 function topicUrl(channelId) {
   return `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 }
+ 
 async function subscribeToHub(env) {
   const body = new URLSearchParams({
     "hub.mode": "subscribe",
     "hub.topic": topicUrl(env.YOUTUBE_CHANNEL_ID),
     "hub.callback": `https://${CALLBACK_HOST}${CALLBACK_PATH}`,
-    "hub.lease_seconds": "432000",
+    "hub.lease_seconds": "432000", // 5日
     "hub.verify": "async",
     "hub.secret": env.CALLBACK_SECRET || "",
   });
@@ -23,6 +25,7 @@ async function subscribeToHub(env) {
  
   return { status: res.status, ok: res.status === 202 || res.status === 204 };
 }
+ 
 async function verifySignature(secret, bodyText, signatureHeader) {
   if (!secret) return true; 
   if (!signatureHeader || !signatureHeader.includes("=")) return false;
@@ -49,7 +52,7 @@ async function verifySignature(secret, bodyText, signatureHeader) {
   }
   return diff === 0;
 }
-
+ 
 function extractEntries(xmlText) {
   const entries = [];
   const entryBlocks = xmlText.match(/<entry>[\s\S]*?<\/entry>/g) || [];
@@ -84,7 +87,7 @@ function isNewUpload(entry) {
  
 async function notifyDiscord(env, entry) {
   const url = `https://www.youtube.com/watch?v=${entry.videoId}`;
-  const content = `@everyone 📢naokun01が新しい動画を投稿しました!\n**${entry.title}**\n${url}`;
+  const content = `@everyone 📢 **${entry.author}** が新しい動画を投稿しました!\n**${entry.title}**\n${url}`;
  
   await fetch(env.DISCORD_WEBHOOK_URL, {
     method: "POST",
@@ -101,6 +104,20 @@ export default {
     const url = new URL(request.url);
  
     if (url.pathname !== CALLBACK_PATH) {
+      if (url.pathname === "/debug-secret") {
+        const val = env.CALLBACK_SECRET || "";
+        return new Response(
+          JSON.stringify({
+            length: val.length,
+            first_char: val.slice(0, 1),
+            last_char: val.slice(-1),
+            has_leading_space: val !== val.trimStart(),
+            has_trailing_space: val !== val.trimEnd(),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+ 
       if (url.pathname === "/subscribe-now" && url.searchParams.get("key") === env.CALLBACK_SECRET) {
         const result = await subscribeToHub(env);
         return new Response(JSON.stringify(result), { status: 200 });
@@ -115,7 +132,8 @@ export default {
       }
       return new Response("Bad Request", { status: 400 });
     }
-     if (request.method === "POST") {
+ 
+    if (request.method === "POST") {
       const bodyText = await request.text();
       const signature = request.headers.get("X-Hub-Signature") || "";
  
