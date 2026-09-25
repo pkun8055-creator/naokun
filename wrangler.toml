@@ -1,1 +1,10 @@
-#まだ何もない...
+name = "youtube-notify"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+[triggers]
+crons = ["0 0 */4 * *"]
+[[kv_namespaces]]
+binding = "SEEN_VIDEOS"
+id = "<YOUR_KV_NAMESPACE_ID>"
+[vars]
+YOUTUBE_CHANNEL_ID = "UCosfmChhKwrbK9WDnDuYAWQ"
