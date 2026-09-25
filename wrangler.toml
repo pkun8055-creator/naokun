@@ -5,6 +5,6 @@ compatibility_date = "2026-09-01"
 crons = ["0 0 */4 * *"]
 [[kv_namespaces]]
 binding = "SEEN_VIDEOS"
-id = "<YOUR_KV_NAMESPACE_ID>"
+id = "d0b24a23f4234fceb30afc7da805aaeb"
 [vars]
 YOUTUBE_CHANNEL_ID = "UCosfmChhKwrbK9WDnDuYAWQ"
