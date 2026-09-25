@@ -14,7 +14,7 @@
  *   https://<worker-url または youtube-notify.pkunyt.com>/youtube-webhook
  */
 
-const CALLBACK_PATH = "/youtube-webhook";
+const CALLBACK_PATH = "/naokun";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
 
