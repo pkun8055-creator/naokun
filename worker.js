@@ -1,6 +1,6 @@
 const CALLBACK_PATH = "/youtube-webhook";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
-const CALLBACK_HOST = "youtube-notify.pkunyt.com";
+const CALLBACK_HOST = "api.naokun.pkunyt.com";
  
 function topicUrl(channelId) {
   return `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
