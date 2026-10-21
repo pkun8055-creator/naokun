@@ -12,7 +12,7 @@
 const CALLBACK_PATH = "/youtube-webhook";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
-const MENTION_USER_ID = "&1558400772784525362"; // 通知でメンションするDiscordユーザー
+const MENTION_ROLE_ID = "1558400772784525362"; // 通知でメンションするDiscordロール
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -82,13 +82,13 @@ function isNewUpload(e) {
 // ---- Discord送信 (成功したかどうかを返す) ----
 async function notifyDiscord(env, e) {
   const content =
-    `<@${MENTION_USER_ID}> 📢 **${e.author}** が新しい動画を投稿しました!\n` +
+    `<@&${MENTION_ROLE_ID}> 📢 **${e.author}** が新しい動画を投稿しました!\n` +
     `**${e.title}**\nhttps://www.youtube.com/watch?v=${e.videoId}`;
 
   const res = await fetch(env.DISCORD_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, allowed_mentions: { users: [MENTION_USER_ID] } }),
+    body: JSON.stringify({ content, allowed_mentions: { roles: [MENTION_ROLE_ID] } }),
   });
   const text = await res.text();
   console.log(`discord webhook: status=${res.status} body=${text.slice(0, 300)}`);
