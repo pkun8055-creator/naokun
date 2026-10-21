@@ -12,7 +12,7 @@
 const CALLBACK_PATH = "/youtube-webhook";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
-const MENTION_USER_ID = "1558400772784525362"; // 通知でメンションするDiscordユーザー
+const MENTION_USER_ID = "&1558400772784525362"; // 通知でメンションするDiscordユーザー
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -126,8 +126,8 @@ export default {
     // Discord送信だけを単体テスト
     if (url.pathname === "/test-notify" && authed) {
       const ok = await notifyDiscord(env, {
-        videoId: "dQw4w9WgXcQ",
-        title: "(テスト通知) test-notifyによるダミー投稿",
+        videoId: "aDs2dSJbzws",
+        title: "(テスト通知)",
         author: "テストチャンネル",
       });
       return json({ sent: ok });
