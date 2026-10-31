@@ -1,18 +1,8 @@
-/**
- * 専属BOT (Cloudflare Worker / 作り直し版)
- * YouTubeのWebSub(PubSubHubbub)通知を受信 → Discord Webhookへ @everyone 付きで通知
- *
- * 必要な設定:
- *   YOUTUBE_CHANNEL_ID   (wrangler.toml の vars)
- *   DISCORD_WEBHOOK_URL  (secret)
- *   CALLBACK_SECRET      (secret)
- *   SEEN_VIDEOS          (KV binding)
- */
 
 const CALLBACK_PATH = "/youtube-webhook";
 const CALLBACK_HOST = "api.naokun.pkunyt.com";
 const HUB_URL = "https://pubsubhubbub.appspot.com/subscribe";
-const MENTION_ROLE_ID = "1558400772784525362"; // 通知でメンションするDiscordロール
+const MENTION_ROLE_ID = "1558400772784525362"; 
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
